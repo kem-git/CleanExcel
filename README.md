@@ -76,3 +76,10 @@ With CleanExcel, you can:
 
 ```bash
 pip install pandas openpyxl
+```
+
+2. Run the file:
+
+```bash
+python app.py
+```
