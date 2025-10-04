@@ -6,73 +6,123 @@ class ModernDataCleaner:
     def __init__(self, root):
         self.root = root
         self.root.title("Data Cleaner")
-        self.root.geometry("850x600")
-        self.root.configure(bg="#f2f2f2")
-        self.root.attributes("-alpha", 0.95)  # translucent
+        self.root.geometry("1050x700")  # upscale window
+        self.root.configure(bg="#000000")  # True black
         self.root.resizable(False, False)
 
         self.file_path = None
         self.df = None
-        self.cleaned_df = None  # store cleaned version
+        self.cleaned_df = None
 
-        # Title
-        tk.Label(root, text="Automated Data Cleaner", bg="#f2f2f2", fg="#333",
-                 font=("Helvetica", 18, "bold")).pack(pady=10)
+        # -------- TITLE --------
+        tk.Label(root, text="Automated Data Cleaner",
+                 bg="#000000", fg="#FFFFFF",
+                 font=("Helvetica", 24, "bold")).pack(pady=20)
 
-        # File Selection
-        tk.Button(root, text="📂 Load File", command=self.load_file,
-                  bg="#fff", fg="#333", relief="groove", bd=2, font=("Helvetica", 12),
-                  activebackground="#ddd").pack(pady=5)
+        # -------- FILE SELECTION --------
+        self.load_btn = tk.Button(root, text="📂 Load File",
+                                  command=self.load_file,
+                                  font=("Helvetica", 14, "bold"),
+                                  padx=22, pady=12,
+                                  relief="flat", bd=0,
+                                  bg="#1C1C1C", fg="#FFFFFF",
+                                  activebackground="#2C2C2C", activeforeground="#FFFFFF")
+        self.load_btn.pack(pady=15)
 
-        # Cleaning Options
-        options_frame = tk.LabelFrame(root, text="Cleaning Options", bg="#f2f2f2", font=("Helvetica", 12))
-        options_frame.pack(pady=10, padx=10, fill="x")
+        self.make_hover(self.load_btn)
+
+        # -------- CLEANING OPTIONS --------
+        options_frame = tk.LabelFrame(root, text=" Cleaning Options ",
+                                      bg="#0D0D0D", fg="#FFFFFF",
+                                      font=("Helvetica", 14, "bold"),
+                                      bd=2, relief="groove", padx=20, pady=12)
+        options_frame.pack(pady=20, padx=20, fill="x")
 
         self.remove_dupes_var = tk.BooleanVar(value=True)
         self.fill_missing_var = tk.BooleanVar(value=True)
         self.trim_text_var = tk.BooleanVar(value=True)
         self.standardize_cols_var = tk.BooleanVar(value=True)
 
-        tk.Checkbutton(options_frame, text="Remove Duplicates (ignore whitespace/case)", variable=self.remove_dupes_var,
-                       bg="#f2f2f2").grid(row=0, column=0, sticky="w", padx=10, pady=5)
-        tk.Checkbutton(options_frame, text="Fill Missing Values (median for numeric, empty for text)", variable=self.fill_missing_var,
-                       bg="#f2f2f2").grid(row=1, column=0, sticky="w", padx=10, pady=5)
-        tk.Checkbutton(options_frame, text="Trim Text Columns", variable=self.trim_text_var,
-                       bg="#f2f2f2").grid(row=0, column=1, sticky="w", padx=10, pady=5)
-        tk.Checkbutton(options_frame, text="Standardize Column Names", variable=self.standardize_cols_var,
-                       bg="#f2f2f2").grid(row=1, column=1, sticky="w", padx=10, pady=5)
+        opts = [
+            ("Remove Duplicates (ignore whitespace/case)", self.remove_dupes_var, 0, 0),
+            ("Fill Missing Values (median for numeric, empty for text)", self.fill_missing_var, 1, 0),
+            ("Trim Text Columns", self.trim_text_var, 0, 1),
+            ("Standardize Column Names", self.standardize_cols_var, 1, 1)
+        ]
 
-        # Buttons
-        btn_frame = tk.Frame(root, bg="#f2f2f2")
-        btn_frame.pack(pady=10)
-        tk.Button(btn_frame, text="🧹 Clean Data", command=self.clean_data_action,
-                  bg="#fff", fg="#333", relief="groove", bd=2, font=("Helvetica", 12),
-                  activebackground="#ddd").grid(row=0, column=0, padx=10)
-        tk.Button(btn_frame, text="👁 Preview Cleaned Data", command=self.preview_data,
-                  bg="#fff", fg="#333", relief="groove", bd=2, font=("Helvetica", 12),
-                  activebackground="#ddd").grid(row=0, column=1, padx=10)
-        tk.Button(btn_frame, text="💾 Save Cleaned File", command=self.save_data,
-                  bg="#fff", fg="#333", relief="groove", bd=2, font=("Helvetica", 12),
-                  activebackground="#ddd").grid(row=0, column=2, padx=10)
+        for text, var, r, c in opts:
+            chk = tk.Checkbutton(options_frame, text=text, variable=var,
+                                 bg="#0D0D0D", fg="#FFFFFF", selectcolor="#1C1C1C",
+                                 activebackground="#1C1C1C",
+                                 font=("Helvetica", 13))
+            chk.grid(row=r, column=c, sticky="w", padx=15, pady=10)
 
-        # Table Frame
-        self.table_frame = tk.Frame(root)
-        self.table_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        # -------- BUTTON FRAME --------
+        btn_frame = tk.Frame(root, bg="#000000")
+        btn_frame.pack(pady=20)
+
+        self.clean_btn = self.make_button(btn_frame, "🧹 Clean Data", self.clean_data_action, 0, 0)
+        self.preview_btn = self.make_button(btn_frame, "👁 Preview Cleaned Data", self.preview_data, 0, 1)
+        self.save_btn = self.make_button(btn_frame, "💾 Save Cleaned File", self.save_data, 0, 2)
+
+        # -------- TABLE FRAME --------
+        self.table_frame = tk.Frame(root, bg="#000000")
+        self.table_frame.pack(fill="both", expand=True, padx=20, pady=20)
         self.tree = None
 
+        # -------- STYLES --------
+        style = ttk.Style()
+        style.theme_use("clam")
+        style.configure("Treeview",
+                        background="#0D0D0D",
+                        foreground="white",
+                        fieldbackground="#0D0D0D",
+                        rowheight=32,
+                        font=("Helvetica", 12))
+        style.configure("Treeview.Heading",
+                        background="#1C1C1C",
+                        foreground="white",
+                        font=("Helvetica", 13, "bold"))
+        style.map("Treeview",
+                  background=[("selected", "#333333")],
+                  foreground=[("selected", "#FFFFFF")])
+
+    # -------- HOVER EFFECTS --------
+    def make_button(self, parent, text, command, row, col):
+        btn = tk.Button(parent, text=text, command=command,
+                        font=("Helvetica", 14, "bold"),
+                        padx=22, pady=12,
+                        relief="flat", bd=0,
+                        bg="#1C1C1C", fg="#FFFFFF",
+                        activebackground="#2C2C2C", activeforeground="#FFFFFF")
+        btn.grid(row=row, column=col, padx=20)
+        self.make_hover(btn)
+        return btn
+
+    def make_hover(self, widget):
+        def on_enter(e):
+            widget["bg"] = "#2C2C2C"
+        def on_leave(e):
+            widget["bg"] = "#1C1C1C"
+        widget.bind("<Enter>", on_enter)
+        widget.bind("<Leave>", on_leave)
+
+    # -------- FILE LOADING --------
     def load_file(self):
-        self.file_path = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx"), ("CSV files", "*.csv")])
+        self.file_path = filedialog.askopenfilename(filetypes=[
+            ("Excel files", "*.xlsx"),
+            ("CSV files", "*.csv")
+        ])
         if self.file_path:
             try:
-                # Read first row to detect headers
                 if self.file_path.endswith(".xlsx"):
                     temp_df = pd.read_excel(self.file_path, header=None)
                 else:
                     temp_df = pd.read_csv(self.file_path, header=None)
 
                 first_row = temp_df.iloc[0]
-                if first_row.apply(lambda x: isinstance(x, str)).sum() >= len(first_row)/2:
-                    header = 0  # first row looks like headers
+                if first_row.apply(lambda x: isinstance(x, str)).sum() >= len(first_row) / 2:
+                    header = 0
                 else:
                     header = None
 
@@ -81,7 +131,6 @@ class ModernDataCleaner:
                 else:
                     self.df = pd.read_csv(self.file_path, header=header)
 
-                # Assign default headers if none detected
                 if header is None:
                     self.df.columns = [f"column_{i+1}" for i in range(self.df.shape[1])]
 
@@ -89,22 +138,20 @@ class ModernDataCleaner:
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to load file:\n{e}")
 
+    # -------- CLEANING --------
     def clean_data(self):
         if self.df is None:
             return None
         df = self.df.copy()
 
-        # Trim text
         if self.trim_text_var.get():
             text_cols = df.select_dtypes(include='object').columns
             for col in text_cols:
                 df[col] = df[col].astype(str).str.strip()
 
-        # Standardize column names
         if self.standardize_cols_var.get():
             df.columns = [c.lower().replace(" ", "_") for c in df.columns]
 
-        # Fill missing values safely
         if self.fill_missing_var.get():
             numeric_cols = df.select_dtypes(include='number').columns
             for col in numeric_cols:
@@ -113,7 +160,6 @@ class ModernDataCleaner:
             for col in text_cols:
                 df[col] = df[col].fillna("")
 
-        # Remove duplicates
         if self.remove_dupes_var.get():
             df = self.remove_duplicates(df)
 
@@ -134,6 +180,7 @@ class ModernDataCleaner:
         df_clean = df_copy.drop_duplicates(ignore_index=True)
         return df_clean
 
+    # -------- PREVIEW --------
     def preview_data(self):
         if self.cleaned_df is None:
             messagebox.showwarning("Not Cleaned", "Please clean the data first.")
@@ -149,17 +196,19 @@ class ModernDataCleaner:
         self.tree["show"] = "headings"
         for col in self.cleaned_df.columns:
             self.tree.heading(col, text=col)
-            self.tree.column(col, width=120)
+            self.tree.column(col, width=160)
 
         for _, row in self.cleaned_df.head(50).iterrows():
             self.tree.insert("", "end", values=list(row))
 
+    # -------- SAVE --------
     def save_data(self):
         if self.cleaned_df is None:
             messagebox.showwarning("No Data", "Please clean the data first.")
             return
         save_path = filedialog.asksaveasfilename(defaultextension=".xlsx",
-                                                 filetypes=[("Excel files", "*.xlsx"), ("CSV files", "*.csv")])
+                                                 filetypes=[("Excel files", "*.xlsx"),
+                                                            ("CSV files", "*.csv")])
         if save_path:
             try:
                 if save_path.endswith(".xlsx"):
@@ -169,6 +218,7 @@ class ModernDataCleaner:
                 messagebox.showinfo("Success", f"Cleaned file saved to {save_path}")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to save file:\n{e}")
+
 
 if __name__ == "__main__":
     root = tk.Tk()
